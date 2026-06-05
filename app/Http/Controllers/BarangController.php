@@ -145,6 +145,50 @@ class BarangController extends Controller
         return redirect()->back()->with('success', 'Barang berhasil dihapus.');
     }
 
+    public function restock(Request $request, Barang $barang)
+    {
+        $validated = $request->validate([
+            'jumlah'     => 'required|integer|min:1',
+            'keterangan' => 'nullable|string|max:500',
+        ]);
+
+        DB::transaction(function () use ($validated, $barang) {
+            $jumlah = (int) $validated['jumlah'];
+            $lokasi_utama = 1;
+
+            // Lock and increment stok_total
+            $stok = Stok::where('id_barang', $barang->id_barang)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $stokSebelum = $stok->stok_total;
+            $stok->increment('stok_total', $jumlah);
+            $stokSesudah = $stokSebelum + $jumlah;
+
+            // Increment jumlahDiLokasi in detail_stok for lokasi 1
+            $detail = DetailStok::firstOrCreate(
+                ['id_barang' => $barang->id_barang, 'id_lokasi' => $lokasi_utama],
+                ['jumlahDiLokasi' => 0, 'createDate' => now()->toDateString()]
+            );
+            $detail->increment('jumlahDiLokasi', $jumlah);
+
+            // Record history
+            History::create([
+                'id_barang'        => $barang->id_barang,
+                'id_lokasi'        => $lokasi_utama,
+                'id_lokasi_tujuan' => null,
+                'keterangan'       => $validated['keterangan'] ?? 'Restock barang',
+                'id_user'          => Auth::id(),
+                'qty_perubahan'    => $jumlah,
+                'jenis_perubahan'  => 'tambah',
+                'stokSebelum'      => $stokSebelum,
+                'stokSesudah'      => $stokSesudah,
+            ]);
+        });
+
+        return redirect()->back()->with('success', 'Stok barang berhasil ditambahkan (restock).');
+    }
+
     public function pindah(Request $request, Barang $barang)
     {
         $validated = $request->validate([

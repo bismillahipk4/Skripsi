@@ -61,6 +61,11 @@ interface PindahForm {
     keterangan: string;
 }
 
+interface RestockForm {
+    jumlah: string;
+    keterangan: string;
+}
+
 
 
 
@@ -72,13 +77,18 @@ function stokBadgeClass(total: number) {
 
 // ── Component ──────────────────────────────────────────────────────────────
 export default function Detail({ barang, lokasi }: Props) {
-    const { errors, flash } = usePage<{
-        errors: Partial<PindahForm>;
+    const { auth, errors, flash } = usePage<{
+        auth: { user: { role?: string } };
+        errors: Partial<PindahForm> & Partial<RestockForm>;
         flash: { success?: string };
     }>().props;
 
+    const isAdmin = auth.user.role === 'Admin';
+
     const [showPindah, setShowPindah] = useState(false);
+    const [showRestock, setShowRestock] = useState(false);
     const [processing, setProcessing] = useState(false);
+    const [processingRestock, setProcessingRestock] = useState(false);
 
     const lokasiDenganStok = barang.detail_stoks.filter(d => d.jumlahDiLokasi > 0);
 
@@ -87,6 +97,11 @@ export default function Detail({ barang, lokasi }: Props) {
         id_lokasi_tujuan: '',
         jumlah:           '1',
         keterangan:       '',
+    });
+
+    const [restockForm, setRestockForm] = useState<RestockForm>({
+        jumlah: '1',
+        keterangan: '',
     });
 
     const stokTotal    = barang.stok?.stok_total ?? 0;
@@ -129,6 +144,23 @@ export default function Detail({ barang, lokasi }: Props) {
         });
     }
 
+    function handleRestockChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+        const { name, value } = e.target;
+        setRestockForm(prev => ({ ...prev, [name]: value }));
+    }
+
+    function handleRestockSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setProcessingRestock(true);
+        router.post(`/barang/${barang.id_barang}/restock`, restockForm, {
+            onFinish:  () => setProcessingRestock(false),
+            onSuccess: () => {
+                setShowRestock(false);
+                setRestockForm({ jumlah: '1', keterangan: '' });
+            },
+        });
+    }
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Detail — ${barang.namaBarang}`} />
@@ -152,13 +184,23 @@ export default function Detail({ barang, lokasi }: Props) {
                             Detail informasi barang
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowPindah(true)}
-                        disabled={lokasiDenganStok.length === 0}
-                        className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-                    >
-                        ↗ Pindahkan Barang
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowPindah(true)}
+                            disabled={lokasiDenganStok.length === 0}
+                            className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+                        >
+                            ↗ Pindahkan Barang
+                        </button>
+                        {isAdmin && (
+                            <button
+                                onClick={() => setShowRestock(true)}
+                                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 active:scale-95 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                            >
+                                + Restock Barang
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Main content */}
@@ -367,6 +409,71 @@ export default function Detail({ barang, lokasi }: Props) {
                                     className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
                                 >
                                     {processing ? 'Memproses...' : 'Pindahkan'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal Restock Barang ── */}
+            {showRestock && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
+
+                        <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-4 dark:border-neutral-800">
+                            <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                                Restock Barang
+                            </h2>
+                            <button
+                                onClick={() => setShowRestock(false)}
+                                className="rounded-lg p-1.5 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleRestockSubmit} className="space-y-4 px-5 py-4">
+
+                            {/* Jumlah */}
+                            <Field label="Jumlah Tambahan" error={errors.jumlah}>
+                                <input
+                                    type="number"
+                                    name="jumlah"
+                                    value={restockForm.jumlah}
+                                    onChange={handleRestockChange}
+                                    min={1}
+                                    required
+                                    className={inputClass(errors.jumlah)}
+                                />
+                            </Field>
+
+                            {/* Keterangan */}
+                            <Field label="Keterangan (Opsional)" error={errors.keterangan}>
+                                <textarea
+                                    name="keterangan"
+                                    value={restockForm.keterangan}
+                                    onChange={handleRestockChange}
+                                    rows={3}
+                                    placeholder="Contoh: Restock dari supplier..."
+                                    className={inputClass(errors.keterangan) + ' resize-none'}
+                                />
+                            </Field>
+
+                            <div className="flex justify-end gap-2 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRestock(false)}
+                                    className="rounded-lg border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processingRestock}
+                                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                                >
+                                    {processingRestock ? 'Memproses...' : 'Restock'}
                                 </button>
                             </div>
                         </form>

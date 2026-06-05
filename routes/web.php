@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/barang',                        [BarangController::class, 'store'])  ->name('barang.store');
         Route::put('/barang/{barang}',                [BarangController::class, 'update']) ->name('barang.update');
         Route::delete('/barang/{barang}',             [BarangController::class, 'destroy'])->name('barang.destroy');
+        Route::post('/barang/{barang}/restock',       [BarangController::class, 'restock'])->name('barang.restock');
 
         // Lokasi
         Route::post('/lokasi', [\App\Http\Controllers\LokasiController::class, 'store'])->name('lokasi.store');
