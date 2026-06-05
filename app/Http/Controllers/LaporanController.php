@@ -75,33 +75,49 @@ class LaporanController extends Controller
                     }
                 }
 
+                if ($request->filled('lokasi') && $tab === 'mutasi') {
+                    $lokasiId = $request->lokasi;
+                    $query->where(function ($q) use ($lokasiId) {
+                        $q->where('id_lokasi', $lokasiId)
+                          ->orWhere('id_lokasi_tujuan', $lokasiId);
+                    });
+                }
+
                 $data = $query->get();
 
                 if ($tab === 'mutasi') {
                     $transformed = collect([]);
                     foreach ($data as $h) {
                         if ($h->jenis_perubahan === 'tambah') {
-                            $h->lokasi_mutasi = $h->lokasi->namaLokasi ?? '-';
-                            $h->aksi = 'Masuk';
-                            $transformed->push($h);
+                            if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
+                                $h->lokasi_mutasi = $h->lokasi->namaLokasi ?? '-';
+                                $h->aksi = 'Masuk';
+                                $transformed->push($h);
+                            }
                         } elseif ($h->jenis_perubahan === 'terjual') {
-                            $h->lokasi_mutasi = $h->lokasi->namaLokasi ?? '-';
-                            $h->aksi = 'Keluar';
-                            $transformed->push($h);
+                            if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
+                                $h->lokasi_mutasi = $h->lokasi->namaLokasi ?? '-';
+                                $h->aksi = 'Keluar';
+                                $transformed->push($h);
+                            }
                         } elseif ($h->jenis_perubahan === 'pindah') {
                             if (empty($jenisPerubahan) || $jenisPerubahan === 'keluar') {
-                                $itemOut = clone $h;
-                                $itemOut->lokasi_mutasi = $h->lokasi->namaLokasi ?? '-';
-                                $itemOut->aksi = 'Keluar';
-                                $itemOut->keterangan = 'Dipindah ke ' . ($h->lokasiTujuan->namaLokasi ?? '-') . ($h->keterangan ? ' - ' . $h->keterangan : '');
-                                $transformed->push($itemOut);
+                                if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
+                                    $itemOut = clone $h;
+                                    $itemOut->lokasi_mutasi = $h->lokasi->namaLokasi ?? '-';
+                                    $itemOut->aksi = 'Keluar';
+                                    $itemOut->keterangan = 'Dipindah ke ' . ($h->lokasiTujuan->namaLokasi ?? '-') . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                                    $transformed->push($itemOut);
+                                }
                             }
                             if (empty($jenisPerubahan) || $jenisPerubahan === 'masuk') {
-                                $itemIn = clone $h;
-                                $itemIn->lokasi_mutasi = $h->lokasiTujuan->namaLokasi ?? '-';
-                                $itemIn->aksi = 'Masuk';
-                                $itemIn->keterangan = 'Pindahan dari ' . ($h->lokasi->namaLokasi ?? '-') . ($h->keterangan ? ' - ' . $h->keterangan : '');
-                                $transformed->push($itemIn);
+                                if (!$request->filled('lokasi') || $h->id_lokasi_tujuan == $request->lokasi) {
+                                    $itemIn = clone $h;
+                                    $itemIn->lokasi_mutasi = $h->lokasiTujuan->namaLokasi ?? '-';
+                                    $itemIn->aksi = 'Masuk';
+                                    $itemIn->keterangan = 'Pindahan dari ' . ($h->lokasi->namaLokasi ?? '-') . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                                    $transformed->push($itemIn);
+                                }
                             }
                         }
                     }

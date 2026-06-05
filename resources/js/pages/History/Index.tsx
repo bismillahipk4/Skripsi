@@ -35,7 +35,9 @@ interface Props {
         tanggal_dari?: string;
         tanggal_sampai?: string;
         tab?: string;
+        lokasi?: string;
     };
+    lokasiList?: Array<{ id_lokasi: number; namaLokasi: string }>;
 }
 
 const JENIS_COLORS: Record<string, string> = {
@@ -50,7 +52,7 @@ function jenisBadgeClass(jenis: string) {
     return JENIS_COLORS[jenis] ?? 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400';
 }
 
-export default function HistoryIndex({ histories, filters }: Props) {
+export default function HistoryIndex({ histories, filters, lokasiList }: Props) {
     const { auth } = usePage<{ auth: { user: { role?: string } } }>().props;
     const isAdmin = auth.user.role === 'Admin';
     const breadcrumbs: BreadcrumbItem[] = [
@@ -62,6 +64,7 @@ export default function HistoryIndex({ histories, filters }: Props) {
     const [jenis, setJenis] = useState(filters.jenis ?? '');
     const [tanggalDari, setTanggalDari] = useState(filters.tanggal_dari ?? '');
     const [tanggalSampai, setTanggalSampai] = useState(filters.tanggal_sampai ?? '');
+    const [lokasi, setLokasi] = useState(filters.lokasi ?? '');
     const [activeTab, setActiveTab] = useState(filters.tab ?? 'aktivitas');
 
     // Modal state
@@ -75,6 +78,7 @@ export default function HistoryIndex({ histories, filters }: Props) {
             jenis, 
             tanggal_dari: tanggalDari, 
             tanggal_sampai: tanggalSampai,
+            lokasi: activeTab === 'mutasi' ? lokasi : '',
             tab: activeTab
         }, { preserveState: true, replace: true });
     };
@@ -82,11 +86,13 @@ export default function HistoryIndex({ histories, filters }: Props) {
     const handleTabChange = (newTab: string) => {
         setActiveTab(newTab);
         setJenis(''); // Reset jenis filter on tab change
+        setLokasi(''); // Reset lokasi filter on tab change
         router.get('/history', { 
             search, 
             jenis: '', 
             tanggal_dari: tanggalDari, 
             tanggal_sampai: tanggalSampai,
+            lokasi: '',
             tab: newTab
         }, { preserveState: true, replace: true });
     };
@@ -96,6 +102,7 @@ export default function HistoryIndex({ histories, filters }: Props) {
         setJenis(''); 
         setTanggalDari(''); 
         setTanggalSampai('');
+        setLokasi('');
         router.get('/history', { tab: activeTab }, { preserveState: true, replace: true });
     };
 
@@ -109,6 +116,7 @@ export default function HistoryIndex({ histories, filters }: Props) {
             if (filters.tanggal_sampai) params.append('tanggal_akhir', filters.tanggal_sampai);
             if (filters.jenis) params.append('jenis_perubahan', filters.jenis);
             if (filters.search) params.append('search', filters.search);
+            if (filters.lokasi) params.append('lokasi', filters.lokasi);
             params.append('tab', activeTab);
 
             // Buka tab baru untuk print (sama seperti fitur Penjualan)
@@ -127,6 +135,7 @@ export default function HistoryIndex({ histories, filters }: Props) {
         filters.jenis && `Jenis: ${filters.jenis}`,
         filters.tanggal_dari && `Dari: ${filters.tanggal_dari}`,
         filters.tanggal_sampai && `Sampai: ${filters.tanggal_sampai}`,
+        activeTab === 'mutasi' && filters.lokasi && `Lokasi: ${lokasiList?.find(l => l.id_lokasi.toString() === filters.lokasi)?.namaLokasi ?? filters.lokasi}`,
     ].filter(Boolean);
 
     return (
@@ -215,6 +224,21 @@ export default function HistoryIndex({ histories, filters }: Props) {
                                 )}
                             </select>
                         </div>
+                        {activeTab === 'mutasi' && (
+                            <div>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Lokasi</label>
+                                <select 
+                                    value={lokasi} 
+                                    onChange={e => setLokasi(e.target.value)} 
+                                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-900"
+                                >
+                                    <option value="">Semua Lokasi</option>
+                                    {lokasiList?.map(l => (
+                                        <option key={l.id_lokasi} value={l.id_lokasi}>{l.namaLokasi}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-xs font-medium text-neutral-500 mb-1">Dari Tanggal</label>
                             <input 

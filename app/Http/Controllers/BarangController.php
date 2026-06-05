@@ -208,6 +208,7 @@ class BarangController extends Controller
     public function history(Request $request)
     {
         $tab = $request->get('tab', 'aktivitas');
+        $lokasiList = Lokasi::orderBy('namaLokasi')->get(['id_lokasi', 'namaLokasi']);
 
         $query = History::query()
             ->select('history.*')
@@ -238,6 +239,14 @@ class BarangController extends Controller
             }
         }
 
+        if ($request->filled('lokasi') && $tab === 'mutasi') {
+            $lokasiId = $request->lokasi;
+            $query->where(function ($q) use ($lokasiId) {
+                $q->where('history.id_lokasi', $lokasiId)
+                  ->orWhere('history.id_lokasi_tujuan', $lokasiId);
+            });
+        }
+
         if ($request->filled('tanggal_dari')) {
             $query->whereDate('history.created_at', '>=', $request->tanggal_dari);
         }
@@ -252,33 +261,41 @@ class BarangController extends Controller
             $transformed = collect([]);
             foreach ($histories->items() as $h) {
                 if ($h->jenis_perubahan === 'tambah') {
-                    $item = $h->toArray();
-                    $item['id'] = $h->id_history;
-                    $item['lokasi_mutasi'] = $h->lokasi_asal_nama;
-                    $item['aksi'] = 'masuk';
-                    $transformed->push($item);
+                    if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
+                        $item = $h->toArray();
+                        $item['id'] = $h->id_history;
+                        $item['lokasi_mutasi'] = $h->lokasi_asal_nama;
+                        $item['aksi'] = 'masuk';
+                        $transformed->push($item);
+                    }
                 } elseif ($h->jenis_perubahan === 'terjual') {
-                    $item = $h->toArray();
-                    $item['id'] = $h->id_history;
-                    $item['lokasi_mutasi'] = $h->lokasi_asal_nama;
-                    $item['aksi'] = 'keluar';
-                    $transformed->push($item);
+                    if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
+                        $item = $h->toArray();
+                        $item['id'] = $h->id_history;
+                        $item['lokasi_mutasi'] = $h->lokasi_asal_nama;
+                        $item['aksi'] = 'keluar';
+                        $transformed->push($item);
+                    }
                 } elseif ($h->jenis_perubahan === 'pindah') {
                     if (empty($request->jenis) || $request->jenis === 'keluar') {
-                        $itemOut = $h->toArray();
-                        $itemOut['id'] = $h->id_history . '_out';
-                        $itemOut['lokasi_mutasi'] = $h->lokasi_asal_nama;
-                        $itemOut['aksi'] = 'keluar';
-                        $itemOut['keterangan'] = 'Dipindah ke ' . $h->lokasi_tujuan_nama . ($h->keterangan ? ' - ' . $h->keterangan : '');
-                        $transformed->push($itemOut);
+                        if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
+                            $itemOut = $h->toArray();
+                            $itemOut['id'] = $h->id_history . '_out';
+                            $itemOut['lokasi_mutasi'] = $h->lokasi_asal_nama;
+                            $itemOut['aksi'] = 'keluar';
+                            $itemOut['keterangan'] = 'Dipindah ke ' . $h->lokasi_tujuan_nama . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                            $transformed->push($itemOut);
+                        }
                     }
                     if (empty($request->jenis) || $request->jenis === 'masuk') {
-                        $itemIn = $h->toArray();
-                        $itemIn['id'] = $h->id_history . '_in';
-                        $itemIn['lokasi_mutasi'] = $h->lokasi_tujuan_nama;
-                        $itemIn['aksi'] = 'masuk';
-                        $itemIn['keterangan'] = 'Pindahan dari ' . $h->lokasi_asal_nama . ($h->keterangan ? ' - ' . $h->keterangan : '');
-                        $transformed->push($itemIn);
+                        if (!$request->filled('lokasi') || $h->id_lokasi_tujuan == $request->lokasi) {
+                            $itemIn = $h->toArray();
+                            $itemIn['id'] = $h->id_history . '_in';
+                            $itemIn['lokasi_mutasi'] = $h->lokasi_tujuan_nama;
+                            $itemIn['aksi'] = 'masuk';
+                            $itemIn['keterangan'] = 'Pindahan dari ' . $h->lokasi_asal_nama . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                            $transformed->push($itemIn);
+                        }
                     }
                 }
             }
@@ -286,8 +303,9 @@ class BarangController extends Controller
         }
 
         return Inertia::render('History/Index', [
-            'histories' => $histories,
-            'filters'   => $request->only(['search', 'jenis', 'tanggal_dari', 'tanggal_sampai', 'tab']),
+            'histories'  => $histories,
+            'lokasiList' => $lokasiList,
+            'filters'    => $request->only(['search', 'jenis', 'tanggal_dari', 'tanggal_sampai', 'tab', 'lokasi']),
         ]);
     }
     // public function history(Request $request)
