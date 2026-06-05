@@ -12,22 +12,30 @@ class Barang extends Model
     protected $fillable = [
         'namaBarang',
         'gambar',
+        'kategori',
         'id_sub_kategori',
+        'deskripsiBarang',
+        'hargaBarang',
     ];
-
-    public function subKategori()
-    {
-        return $this->belongsTo(Kategori::class, 'id_sub_kategori', 'id_kategori');
-    }
 
     public function stok()
     {
-        return $this->hasOne(\App\Models\Stok::class, 'id_barang', 'id_barang');
+        return $this->hasOne(Stok::class, 'id_barang', 'id_barang');
     }
 
-    public function detailStoks()
+    public function detail_stoks()
     {
-        return $this->hasMany(\App\Models\DetailStok::class, 'id_barang', 'id_barang');
+        return $this->hasMany(DetailStok::class, 'id_barang', 'id_barang');
+    }
+
+    public function histories()
+    {
+        return $this->hasMany(History::class, 'id_barang', 'id_barang');
+    }
+
+    public function sub_kategori()
+    {
+        return $this->belongsTo(SubKategori::class, 'id_sub_kategori', 'id_sub_kategori');
     }
     
 }

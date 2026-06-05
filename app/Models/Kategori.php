@@ -14,23 +14,14 @@ class Kategori extends Model
 
     protected $fillable = [
         'namaKategori',
-        'parent_id',
     ];
 
     /**
-     * Get the parent category.
+     * Get the subcategories for the category.
      */
-    public function parent()
+    public function subKategoris()
     {
-        return $this->belongsTo(Kategori::class, 'parent_id', 'id_kategori');
-    }
-
-    /**
-     * Get the subcategories.
-     */
-    public function children()
-    {
-        return $this->hasMany(Kategori::class, 'parent_id', 'id_kategori');
+        return $this->hasMany(SubKategori::class, 'id_kategori', 'id_kategori');
     }
 
     /**

@@ -139,7 +139,7 @@ class PenjualanController extends Controller
         // Hitung total penjualan
         $totalPenjualan = 0;
         foreach ($histories as $h) {
-            $harga = $h->barang->detailStoks->first()?->hargaBarang ?? 0;
+            $harga = $h->barang->hargaBarang ?? 0;
             $totalPenjualan += (float) $harga * $h->qty_perubahan;
         }
 

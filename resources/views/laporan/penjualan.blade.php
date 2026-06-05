@@ -37,15 +37,15 @@
                 <td>{{ $item->barang->namaBarang ?? '-' }}</td>
                 <td>{{ $item->created_at->format('d/m/Y') }}</td>
                 <td>{{ $item->qty_perubahan }}</td>
-                <td>Rp {{ number_format($item->hargaBarang ?? 0, 0, ',', '.') }}</td>
-                <td>Rp {{ number_format(($item->qty_perubahan * ($item->hargaBarang ?? 0)), 0, ',', '.') }}</td>
+                <td>Rp {{ number_format($item->barang->hargaBarang ?? 0, 0, ',', '.') }}</td>
+                <td>Rp {{ number_format(($item->qty_perubahan * ($item->barang->hargaBarang ?? 0)), 0, ',', '.') }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
     <div class="total">
-        Total Penjualan: Rp {{ number_format($data->sum(fn($item) => $item->qty_perubahan * ($item->hargaBarang ?? 0)), 0, ',', '.') }}
+        Total Penjualan: Rp {{ number_format($data->sum(fn($item) => $item->qty_perubahan * ($item->barang->hargaBarang ?? 0)), 0, ',', '.') }}
     </div>
 </body>
 </html>

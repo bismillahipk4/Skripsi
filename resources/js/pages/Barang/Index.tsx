@@ -18,17 +18,17 @@ interface DetailStok {
     hargaBarang: string | null;
 }
 
+export interface SubKategori {
+    id_sub_kategori: number;
+    id_kategori: number;
+    namaSubKategori: string;
+    kategori?: Kategori;
+}
+
 export interface Kategori {
     id_kategori: number;
     namaKategori: string;
-    parent_id: number | null;
-    children?: Kategori[];
-}
-
-export interface SubKategori {
-    id_kategori: number;
-    namaKategori: string;
-    parent?: Kategori;
+    sub_kategoris?: SubKategori[];
 }
 
 interface Barang {
@@ -131,7 +131,7 @@ export default function Index({ barang, kategoriList }: Props) {
             const matchSearch = b.namaBarang.toLowerCase().includes(search.toLowerCase());
             
             const matchKategori = filterKategori === '' || 
-                String(b.sub_kategori?.parent?.id_kategori) === filterKategori;
+                String(b.sub_kategori?.kategori?.id_kategori) === filterKategori;
                 
             const matchSubKategori = filterSubKategori === '' || 
                 String(b.id_sub_kategori) === filterSubKategori;
@@ -160,11 +160,11 @@ export default function Index({ barang, kategoriList }: Props) {
         setEditTarget(b);
         setForm({
             namaBarang: b.namaBarang,
-            id_kategori: String(b.sub_kategori?.parent?.id_kategori ?? ''),
+            id_kategori: String(b.sub_kategori?.kategori?.id_kategori ?? ''),
             id_sub_kategori: String(b.id_sub_kategori ?? ''),
             stok_total: String(b.stok?.stok_total ?? 0),
-            deskripsiBarang: b.detail_stoks?.[0]?.deskripsiBarang ?? '',
-            hargaBarang: b.detail_stoks?.[0]?.hargaBarang ?? '',
+            deskripsiBarang: b.deskripsiBarang ?? '',
+            hargaBarang: b.hargaBarang ?? '',
         });
         setPreview(b.gambar ? `/storage/${b.gambar}` : null);
         setShowModal(true);
@@ -263,8 +263,13 @@ export default function Index({ barang, kategoriList }: Props) {
     }
 
     function handleDeleteKategori(id: number) {
-        if (!confirm('Yakin ingin menghapus kategori ini?')) return;
+        if (!confirm('Yakin ingin menghapus kategori ini? (Subkategori juga akan terhapus)')) return;
         router.delete(`/kategori/${id}`);
+    }
+
+    function handleDeleteSubKategori(id: number) {
+        if (!confirm('Yakin ingin menghapus subkategori ini?')) return;
+        router.delete(`/subkategori/${id}`);
     }
 
     const isAdd = !editTarget;
@@ -312,15 +317,15 @@ export default function Index({ barang, kategoriList }: Props) {
                         </select>
 
                         {/* SubKategori Filter (Hanya tampil jika Kategori terpilih) */}
-                        {activeFilterKategoriObj && activeFilterKategoriObj.children && activeFilterKategoriObj.children.length > 0 && (
+                        {activeFilterKategoriObj && activeFilterKategoriObj.sub_kategoris && activeFilterKategoriObj.sub_kategoris.length > 0 && (
                             <select
                                 value={filterSubKategori}
                                 onChange={e => setFilterSubKategori(e.target.value)}
                                 className="rounded-lg border border-neutral-200 bg-transparent px-3 py-2 text-sm outline-none transition focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 dark:border-neutral-700 dark:text-neutral-100 dark:focus:border-neutral-500 dark:focus:ring-neutral-800"
                             >
                                 <option value="">Semua Subkategori</option>
-                                {activeFilterKategoriObj.children.map(sub => (
-                                    <option key={sub.id_kategori} value={sub.id_kategori}>{sub.namaKategori}</option>
+                                {activeFilterKategoriObj.sub_kategoris.map(sub => (
+                                    <option key={sub.id_sub_kategori} value={sub.id_sub_kategori}>{sub.namaSubKategori}</option>
                                 ))}
                             </select>
                         )}
@@ -361,7 +366,7 @@ export default function Index({ barang, kategoriList }: Props) {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {filtered.map(b => {
                             const stokTotal = b.stok?.stok_total ?? 0;
-                            const badgeColor = getBadgeClass(b.sub_kategori?.parent?.id_kategori ?? null);
+                            const badgeColor = getBadgeClass(b.sub_kategori?.kategori?.id_kategori ?? null);
                             
                             return (
                                 <div
@@ -392,7 +397,7 @@ export default function Index({ barang, kategoriList }: Props) {
                                         <div>
                                             {b.sub_kategori ? (
                                                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${badgeColor}`}>
-                                                    {b.sub_kategori.parent?.namaKategori} &gt; {b.sub_kategori.namaKategori}
+                                                    {b.sub_kategori.kategori?.namaKategori} &gt; {b.sub_kategori.namaSubKategori}
                                                 </span>
                                             ) : (
                                                 <span className="text-xs text-neutral-300 dark:text-neutral-600">Tanpa kategori</span>
@@ -484,8 +489,8 @@ export default function Index({ barang, kategoriList }: Props) {
                                             className={inputClass()}
                                         >
                                             <option value="">-- SubKategori --</option>
-                                            {activeFormKategoriObj?.children?.map(sub => (
-                                                <option key={sub.id_kategori} value={sub.id_kategori}>{sub.namaKategori}</option>
+                                            {activeFormKategoriObj?.sub_kategoris?.map(sub => (
+                                                <option key={sub.id_sub_kategori} value={sub.id_sub_kategori}>{sub.namaSubKategori}</option>
                                             ))}
                                         </select>
                                     </Field>
@@ -635,11 +640,11 @@ export default function Index({ barang, kategoriList }: Props) {
                                             <div className="mt-3 pl-4 border-l-2 border-neutral-100 dark:border-neutral-800">
                                                 {/* Daftar Sub */}
                                                 <ul className="space-y-2 mb-3">
-                                                    {kat.children?.map(sub => (
-                                                        <li key={sub.id_kategori} className="flex items-center justify-between text-sm">
-                                                            <span className="text-neutral-600 dark:text-neutral-300">{sub.namaKategori}</span>
+                                                    {kat.sub_kategoris?.map(sub => (
+                                                        <li key={sub.id_sub_kategori} className="flex items-center justify-between text-sm">
+                                                            <span className="text-neutral-600 dark:text-neutral-300">{sub.namaSubKategori}</span>
                                                             <button
-                                                                onClick={() => handleDeleteKategori(sub.id_kategori)}
+                                                                onClick={() => handleDeleteSubKategori(sub.id_sub_kategori)}
                                                                 className="text-rose-500 hover:underline"
                                                             >
                                                                 Hapus

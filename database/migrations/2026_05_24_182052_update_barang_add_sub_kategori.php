@@ -11,13 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::create('sub_kategori', function (Blueprint $table) {
+            $table->id('id_sub_kategori');
+            $table->unsignedBigInteger('id_kategori');
+            $table->string('namaSubKategori', 100);
+            $table->foreign('id_kategori')->references('id_kategori')->on('kategori')->onDelete('cascade');
+            $table->unique(['id_kategori', 'namaSubKategori']);
+            $table->timestamps();
+        });
+
         Schema::table('barang', function (Blueprint $table) {
             // Drop old string column
             $table->dropColumn('kategori');
             
             // Add new foreign key column (nullable in case we have items without categories)
             $table->unsignedBigInteger('id_sub_kategori')->nullable()->after('gambar');
-            $table->foreign('id_sub_kategori')->references('id_kategori')->on('kategori')->onDelete('set null');
+            $table->foreign('id_sub_kategori')->references('id_sub_kategori')->on('sub_kategori')->onDelete('set null');
         });
     }
 
@@ -32,5 +41,7 @@ return new class extends Migration
             
             $table->string('kategori', 50)->nullable()->after('gambar');
         });
+        
+        Schema::dropIfExists('sub_kategori');
     }
 };

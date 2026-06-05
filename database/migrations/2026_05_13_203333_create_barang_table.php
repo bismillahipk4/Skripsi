@@ -13,6 +13,8 @@ return new class extends Migration
             $table->string('namaBarang', 100);
             $table->string('gambar')->nullable();
             $table->string('kategori', 50)->nullable();
+            $table->text('deskripsiBarang')->nullable();
+            $table->decimal('hargaBarang', 12, 2)->nullable();
             $table->timestamps();
         });
     }

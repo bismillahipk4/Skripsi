@@ -32,7 +32,7 @@
                 <td>{{ $item->barang->namaBarang ?? '-' }}</td>
                 <td>{{ $item->lokasi->namaLokasi ?? '-' }}</td>
                 <td>{{ $item->jumlahDiLokasi }}</td>
-                <td>Rp {{ number_format($item->hargaBarang ?? 0, 0, ',', '.') }}</td>
+                <td>Rp {{ number_format($item->barang->hargaBarang ?? 0, 0, ',', '.') }}</td>
             </tr>
             @endforeach
         </tbody>

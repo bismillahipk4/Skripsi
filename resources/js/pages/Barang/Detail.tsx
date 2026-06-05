@@ -15,8 +15,6 @@ interface DetailStok {
     id_barang: number;
     id_lokasi: number;
     jumlahDiLokasi: number;
-    deskripsiBarang: string | null;
-    hargaBarang: string | null;
     createDate: string | null;
     lokasi: Lokasi;
 }
@@ -33,9 +31,10 @@ interface Kategori {
 }
 
 interface SubKategori {
+    id_sub_kategori: number;
     id_kategori: number;
-    namaKategori: string;
-    parent?: Kategori;
+    namaSubKategori: string;
+    kategori?: Kategori;
 }
 
 interface Barang {
@@ -44,6 +43,8 @@ interface Barang {
     gambar: string | null;
     id_sub_kategori: number | null;
     sub_kategori?: SubKategori | null;
+    deskripsiBarang: string | null;
+    hargaBarang: string | null;
     created_at: string;
     stok: Stok | null;
     detail_stoks: DetailStok[];
@@ -113,9 +114,8 @@ export default function Detail({ barang, lokasi }: Props) {
     // Stok maks dari lokasi asal
     const maxJumlah = lokasiDenganStok.find(d => d.id_lokasi === lokasiAsal)?.jumlahDiLokasi ?? 0;
 
-    // Deskripsi dari detail stok pertama
-    const deskripsi = barang.detail_stoks[0]?.deskripsiBarang ?? null;
-    const harga = barang.detail_stoks[0]?.hargaBarang ?? null;
+    const deskripsi = barang.deskripsiBarang ?? null;
+    const harga = barang.hargaBarang ?? null;
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -238,8 +238,8 @@ export default function Detail({ barang, lokasi }: Props) {
 
                                 <DetailRow label="Kategori">
                                     {barang.sub_kategori ? (
-                                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getBadgeClass(barang.sub_kategori.parent?.id_kategori ?? null)}`}>
-                                            {barang.sub_kategori.parent?.namaKategori} &gt; {barang.sub_kategori.namaKategori}
+                                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${getBadgeClass(barang.sub_kategori.kategori?.id_kategori ?? null)}`}>
+                                            {barang.sub_kategori.kategori?.namaKategori} &gt; {barang.sub_kategori.namaSubKategori}
                                         </span>
                                     ) : (
                                         <span className="text-sm text-neutral-300 dark:text-neutral-600">—</span>

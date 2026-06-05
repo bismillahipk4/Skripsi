@@ -19,9 +19,9 @@ class BarangController extends Controller
 
     public function index()
     {
-        $barang = Barang::with(['stok', 'subKategori.parent', 'detailStoks'])->latest()->get();
+        $barang = Barang::with(['stok', 'sub_kategori.kategori', 'detail_stoks'])->latest()->get();
 
-        $kategoriList = Kategori::with('children')->whereNull('parent_id')->orderBy('namaKategori')->get();
+        $kategoriList = Kategori::with('subKategoris')->orderBy('namaKategori')->get();
 
         return Inertia::render('Barang/Index', [
             'barang'       => $barang,
@@ -33,8 +33,8 @@ class BarangController extends Controller
     {
         $barang->load([
             'stok',
-            'detailStoks.lokasi',
-            'subKategori.parent',
+            'detail_stoks.lokasi',
+            'sub_kategori.kategori',
         ]);
 
         $lokasi = Lokasi::orderBy('namaLokasi')->get(['id_lokasi', 'namaLokasi']);
@@ -49,7 +49,7 @@ class BarangController extends Controller
     {
         $validated = $request->validate([
             'namaBarang'      => 'required|string|max:100',
-            'id_sub_kategori' => 'nullable|exists:kategori,id_kategori',
+            'id_sub_kategori' => 'nullable|exists:sub_kategori,id_sub_kategori',
             'gambar'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'stok_total'      => 'required|integer|min:0',
             'deskripsiBarang' => 'nullable|string',
@@ -65,6 +65,8 @@ class BarangController extends Controller
                 'namaBarang'      => $validated['namaBarang'],
                 'id_sub_kategori' => $validated['id_sub_kategori'] ?? null,
                 'gambar'          => $validated['gambar'] ?? null,
+                'deskripsiBarang' => $validated['deskripsiBarang'] ?? null,
+                'hargaBarang'     => $validated['hargaBarang'] ?? null,
             ]);
 
             Stok::create([
@@ -76,8 +78,6 @@ class BarangController extends Controller
                 'id_barang'       => $barang->id_barang,
                 'id_lokasi'       => 1,
                 'jumlahDiLokasi'  => $validated['stok_total'],
-                'deskripsiBarang' => $validated['deskripsiBarang'] ?? null,
-                'hargaBarang'     => $validated['hargaBarang'] ?? null,
                 'createDate'      => now()->toDateString(),
             ]);
 
@@ -102,7 +102,7 @@ class BarangController extends Controller
     {
         $validated = $request->validate([
             'namaBarang'      => 'required|string|max:100',
-            'id_sub_kategori' => 'nullable|exists:kategori,id_kategori',
+            'id_sub_kategori' => 'nullable|exists:sub_kategori,id_sub_kategori',
             'gambar'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'deskripsiBarang' => 'nullable|string',
             'hargaBarang'     => 'nullable|numeric|min:0',
@@ -118,6 +118,8 @@ class BarangController extends Controller
         $updateData = [
             'namaBarang'      => $validated['namaBarang'],
             'id_sub_kategori' => $validated['id_sub_kategori'] ?? null,
+            'deskripsiBarang' => $validated['deskripsiBarang'] ?? null,
+            'hargaBarang'     => $validated['hargaBarang'] ?? null,
         ];
 
         if (isset($validated['gambar'])) {
@@ -125,11 +127,6 @@ class BarangController extends Controller
         }
 
         $barang->update($updateData);
-
-        DetailStok::where('id_barang', $barang->id_barang)->update([
-            'deskripsiBarang' => $validated['deskripsiBarang'] ?? null,
-            'hargaBarang'     => $validated['hargaBarang'] ?? null,
-        ]);
 
         return redirect()->back()->with('success', 'Barang berhasil diupdate.');
     }

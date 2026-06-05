@@ -16,9 +16,7 @@ class DetailStok extends Model
         'id_barang',
         'id_lokasi',
         'jumlahDiLokasi',
-        'deskripsiBarang',
         'createDate',
-        'hargaBarang',
     ];
 
     public function barang()

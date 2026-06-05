@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
         // Kategori
         Route::post('/kategori', [\App\Http\Controllers\KategoriController::class, 'store'])->name('kategori.store');
         Route::delete('/kategori/{kategori}', [\App\Http\Controllers\KategoriController::class, 'destroy'])->name('kategori.destroy');
+        Route::delete('/subkategori/{subKategori}', [\App\Http\Controllers\KategoriController::class, 'destroySub'])->name('subkategori.destroy');
 
         // Laporan
         Route::get('/laporan/generate', [LaporanController::class, 'generate']);

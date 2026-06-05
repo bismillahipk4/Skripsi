@@ -13,9 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('id_barang');
             $table->unsignedBigInteger('id_lokasi');
             $table->integer('jumlahDiLokasi')->default(0);
-            $table->text('deskripsiBarang')->nullable();
             $table->date('createDate')->nullable();
-            $table->decimal('hargaBarang', 12, 2)->nullable();
             $table->timestamps();
 
             // Foreign Key yang benar

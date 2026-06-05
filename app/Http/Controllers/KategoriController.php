@@ -17,20 +17,36 @@ class KategoriController extends Controller
             'parent_id'    => 'nullable|exists:kategori,id_kategori',
         ]);
 
-        // Pastikan kombinasi unik untuk level yang sama
-        $exists = Kategori::where('namaKategori', $validated['namaKategori'])
-            ->where('parent_id', $validated['parent_id'] ?? null)
-            ->exists();
+        if (isset($validated['parent_id'])) {
+            $exists = \App\Models\SubKategori::where('namaSubKategori', $validated['namaKategori'])
+                ->where('id_kategori', $validated['parent_id'])
+                ->exists();
 
-        if ($exists) {
-            return redirect()->back()->withErrors([
-                'namaKategori' => 'Nama kategori/subkategori ini sudah ada di level yang sama.'
+            if ($exists) {
+                return redirect()->back()->withErrors([
+                    'namaKategori' => 'Nama subkategori ini sudah ada di kategori tersebut.'
+                ]);
+            }
+
+            \App\Models\SubKategori::create([
+                'id_kategori'     => $validated['parent_id'],
+                'namaSubKategori' => $validated['namaKategori'],
+            ]);
+        } else {
+            $exists = Kategori::where('namaKategori', $validated['namaKategori'])->exists();
+
+            if ($exists) {
+                return redirect()->back()->withErrors([
+                    'namaKategori' => 'Nama kategori ini sudah ada.'
+                ]);
+            }
+
+            Kategori::create([
+                'namaKategori' => $validated['namaKategori'],
             ]);
         }
 
-        Kategori::create($validated);
-
-        return redirect()->back()->with('success', 'Kategori berhasil ditambahkan.');
+        return redirect()->back()->with('success', 'Kategori/Subkategori berhasil ditambahkan.');
     }
 
     /**
@@ -38,11 +54,13 @@ class KategoriController extends Controller
      */
     public function destroy(Kategori $kategori)
     {
-        // Karena di migration ada onDelete('cascade') untuk parent_id,
-        // subkategorinya akan ikut terhapus otomatis, 
-        // dan barang yang punya id_sub_kategori akan di set null (onDelete('set null')).
         $kategori->delete();
-
         return redirect()->back()->with('success', 'Kategori berhasil dihapus.');
+    }
+
+    public function destroySub(\App\Models\SubKategori $subKategori)
+    {
+        $subKategori->delete();
+        return redirect()->back()->with('success', 'Subkategori berhasil dihapus.');
     }
 }

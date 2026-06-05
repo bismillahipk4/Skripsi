@@ -222,7 +222,7 @@
         <tbody>
             @forelse($histories as $i => $h)
                 @php
-                    $harga = (float) ($h->barang->detailStoks->first()?->hargaBarang ?? 0);
+                    $harga = (float) ($h->barang->hargaBarang ?? 0);
                     $subtotal = $harga * $h->qty_perubahan;
                 @endphp
                 <tr>
