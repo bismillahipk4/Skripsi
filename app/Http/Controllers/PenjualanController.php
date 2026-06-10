@@ -43,7 +43,7 @@ class PenjualanController extends Controller
         $histories = $query->paginate(15)->withQueryString();
 
         // Ambil list barang dan detail stok untuk dropdown form penjualan
-        $barang = Barang::with(['detailStoks.lokasi'])->orderBy('namaBarang')->get();
+        $barang = Barang::with(['detail_stoks.lokasi'])->orderBy('namaBarang')->get();
 
         return Inertia::render('Penjualan/Index', [
             'histories' => $histories,
@@ -114,7 +114,7 @@ class PenjualanController extends Controller
         $query = History::query()
             ->select('history.*')
             ->where('jenis_perubahan', 'terjual')
-            ->with(['barang.detailStoks', 'user'])
+            ->with(['barang.detail_stoks', 'user'])
             ->leftJoin('lokasi as la', 'history.id_lokasi', '=', 'la.id_lokasi')
             ->addSelect([
                 'la.namaLokasi as lokasi_asal_nama',
