@@ -46,6 +46,10 @@ const JENIS_COLORS: Record<string, string> = {
     keluar: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
     pindah: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
     terjual: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+    retur_masuk: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    retur_keluar: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400',
+    opname_lebih: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+    opname_kurang: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
 };
 
 function jenisBadgeClass(jenis: string) {
@@ -215,6 +219,10 @@ export default function HistoryIndex({ histories, filters, lokasiList }: Props) 
                                         <option value="tambah">Tambah</option>
                                         <option value="pindah">Pindah</option>
                                         <option value="terjual">Terjual</option>
+                                        <option value="retur_masuk">Retur Masuk</option>
+                                        <option value="retur_keluar">Retur Keluar</option>
+                                        <option value="opname_lebih">Opname Lebih</option>
+                                        <option value="opname_kurang">Opname Kurang</option>
                                     </>
                                 ) : (
                                     <>

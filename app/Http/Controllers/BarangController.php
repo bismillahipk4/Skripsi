@@ -271,9 +271,9 @@ class BarangController extends Controller
         if ($request->filled('jenis')) {
             if ($tab === 'mutasi') {
                 if ($request->jenis === 'masuk') {
-                    $query->whereIn('jenis_perubahan', ['tambah', 'pindah']);
+                    $query->whereIn('jenis_perubahan', ['tambah', 'pindah', 'retur_masuk', 'opname_lebih']);
                 } elseif ($request->jenis === 'keluar') {
-                    $query->whereIn('jenis_perubahan', ['terjual', 'pindah']);
+                    $query->whereIn('jenis_perubahan', ['terjual', 'pindah', 'retur_keluar', 'opname_kurang']);
                 }
             } else {
                 $query->where('jenis_perubahan', $request->jenis);
@@ -301,20 +301,36 @@ class BarangController extends Controller
         if ($tab === 'mutasi') {
             $transformed = collect([]);
             foreach ($histories->items() as $h) {
-                if ($h->jenis_perubahan === 'tambah') {
+                if (in_array($h->jenis_perubahan, ['tambah', 'retur_masuk', 'opname_lebih'])) {
                     if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
                         $item = $h->toArray();
                         $item['id'] = $h->id_history;
                         $item['lokasi_mutasi'] = $h->lokasi_asal_nama;
                         $item['aksi'] = 'masuk';
+                        
+                        // Keterangan dinamis
+                        if ($h->jenis_perubahan === 'retur_masuk') {
+                            $item['keterangan'] = 'Retur (Masuk)' . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                        } elseif ($h->jenis_perubahan === 'opname_lebih') {
+                            $item['keterangan'] = 'Stock Opname (Lebih)' . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                        }
+                        
                         $transformed->push($item);
                     }
-                } elseif ($h->jenis_perubahan === 'terjual') {
+                } elseif (in_array($h->jenis_perubahan, ['terjual', 'retur_keluar', 'opname_kurang'])) {
                     if (!$request->filled('lokasi') || $h->id_lokasi == $request->lokasi) {
                         $item = $h->toArray();
                         $item['id'] = $h->id_history;
                         $item['lokasi_mutasi'] = $h->lokasi_asal_nama;
                         $item['aksi'] = 'keluar';
+                        
+                        // Keterangan dinamis
+                        if ($h->jenis_perubahan === 'retur_keluar') {
+                            $item['keterangan'] = 'Retur (Keluar)' . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                        } elseif ($h->jenis_perubahan === 'opname_kurang') {
+                            $item['keterangan'] = 'Stock Opname (Kurang)' . ($h->keterangan ? ' - ' . $h->keterangan : '');
+                        }
+                        
                         $transformed->push($item);
                     }
                 } elseif ($h->jenis_perubahan === 'pindah') {
@@ -348,6 +364,75 @@ class BarangController extends Controller
             'lokasiList' => $lokasiList,
             'filters'    => $request->only(['search', 'jenis', 'tanggal_dari', 'tanggal_sampai', 'tab', 'lokasi']),
         ]);
+    }
+
+    public function retur(Request $request, Barang $barang)
+    {
+        $validated = $request->validate([
+            'jumlah'      => 'required|integer|min:1',
+            'jenis_retur' => 'required|in:masuk,keluar',
+            'keterangan'  => 'nullable|string|max:500',
+        ]);
+
+        DB::transaction(function () use ($validated, $barang) {
+            $jumlah = (int) $validated['jumlah'];
+            $jenis = $validated['jenis_retur'];
+            $lokasi_utama = 1; // Selalu ke Gudang 1
+
+            // Lock and get stok_total
+            $stok = Stok::where('id_barang', $barang->id_barang)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $stokSebelum = $stok->stok_total;
+
+            if ($jenis === 'masuk') {
+                $stok->increment('stok_total', $jumlah);
+                $stokSesudah = $stokSebelum + $jumlah;
+
+                // Increment jumlahDiLokasi in detail_stok for lokasi 1
+                $detail = DetailStok::firstOrCreate(
+                    ['id_barang' => $barang->id_barang, 'id_lokasi' => $lokasi_utama],
+                    ['jumlahDiLokasi' => 0, 'createDate' => now()->toDateString()]
+                );
+                $detail->increment('jumlahDiLokasi', $jumlah);
+                
+                $jenis_perubahan = 'retur_masuk';
+            } else {
+                // Retur Keluar
+                $detail = DetailStok::where('id_barang', $barang->id_barang)
+                    ->where('id_lokasi', $lokasi_utama)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($detail->jumlahDiLokasi < $jumlah) {
+                    abort(422, 'Stok di lokasi utama tidak mencukupi untuk diretur.');
+                }
+
+                $stok->decrement('stok_total', $jumlah);
+                $stokSesudah = $stokSebelum - $jumlah;
+                $detail->decrement('jumlahDiLokasi', $jumlah);
+                
+                $jenis_perubahan = 'retur_keluar';
+            }
+
+                $keterangan_default = $jenis === 'masuk' ? 'Sisa barang kembali dari produksi' : 'Barang dimusnahkan';
+                
+                // Record history
+                History::create([
+                    'id_barang'        => $barang->id_barang,
+                    'id_lokasi'        => $lokasi_utama,
+                    'id_lokasi_tujuan' => null,
+                    'keterangan'       => $validated['keterangan'] ?? $keterangan_default,
+                'id_user'          => Auth::id(),
+                'qty_perubahan'    => $jumlah,
+                'jenis_perubahan'  => $jenis_perubahan,
+                'stokSebelum'      => $stokSebelum,
+                'stokSesudah'      => $stokSesudah,
+            ]);
+        });
+
+        return redirect()->back()->with('success', 'Retur barang berhasil dicatat.');
     }
     // public function history(Request $request)
     // {

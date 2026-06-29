@@ -4,7 +4,7 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Boxes, Folder, History, LayoutGrid, Users, ShoppingCart } from 'lucide-react';
+import { BookOpen, Boxes, Folder, History, LayoutGrid, Users, ShoppingCart, ClipboardCheck, ClipboardList } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -22,6 +22,11 @@ const mainNavItems: NavItem[] = [
         title: 'History',
         url:'/history',
         icon: History,
+    },
+    {
+        title: 'Stock Opname',
+        url: '/opname',
+        icon: ClipboardCheck,
     }
 ];
 
@@ -39,6 +44,12 @@ export function AppSidebar() {
             title: 'User',
             url: '/users',
             icon: Users,
+        });
+        
+        items.push({
+            title: 'Approval Opname',
+            url: '/opname/approval',
+            icon: ClipboardList,
         });
     }
 

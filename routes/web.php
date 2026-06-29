@@ -46,6 +46,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/barang',                         [BarangController::class, 'index'])  ->name('barang.index');
         Route::get('/barang/{barang}',                [BarangController::class, 'show'])   ->name('barang.show');
         Route::post('/barang/{barang}/pindah',        [BarangController::class, 'pindah']) ->name('barang.pindah');
+        Route::post('/barang/{barang}/retur',         [BarangController::class, 'retur'])  ->name('barang.retur');
 
         // History
         Route::get('/history', [BarangController::class, 'history'])->name('history.index');
@@ -53,6 +54,17 @@ Route::middleware('auth')->group(function () {
         // Penjualan
         Route::get('/penjualan',  [\App\Http\Controllers\PenjualanController::class, 'index'])->name('penjualan.index');
         Route::post('/penjualan', [\App\Http\Controllers\PenjualanController::class, 'store'])->name('penjualan.store');
+
+        // Opname
+        Route::get('/opname', [\App\Http\Controllers\OpnameController::class, 'index'])->name('opname.index');
+        Route::post('/opname', [\App\Http\Controllers\OpnameController::class, 'store'])->name('opname.store');
+    });
+
+    // Admin Only Routes for Opname Approval
+    Route::middleware('admin')->group(function () {
+        Route::get('/opname/approval', [\App\Http\Controllers\OpnameController::class, 'approvalIndex'])->name('opname.approval.index');
+        Route::post('/opname/{id}/approve', [\App\Http\Controllers\OpnameController::class, 'approve'])->name('opname.approve');
+        Route::post('/opname/{id}/reject', [\App\Http\Controllers\OpnameController::class, 'reject'])->name('opname.reject');
     });
 });
 

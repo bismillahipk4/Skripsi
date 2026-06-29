@@ -67,6 +67,12 @@ interface RestockForm {
     keterangan: string;
 }
 
+interface ReturForm {
+    jumlah: string;
+    jenis_retur: 'masuk' | 'keluar';
+    keterangan: string;
+}
+
 
 
 
@@ -80,7 +86,7 @@ function stokBadgeClass(total: number) {
 export default function Detail({ barang, lokasi }: Props) {
     const { auth, errors, flash } = usePage<{
         auth: { user: { role?: string } };
-        errors: Partial<PindahForm> & Partial<RestockForm>;
+        errors: Partial<PindahForm> & Partial<RestockForm> & Partial<ReturForm>;
         flash: { success?: string };
     }>().props;
 
@@ -88,8 +94,10 @@ export default function Detail({ barang, lokasi }: Props) {
 
     const [showPindah, setShowPindah] = useState(false);
     const [showRestock, setShowRestock] = useState(false);
+    const [showRetur, setShowRetur] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [processingRestock, setProcessingRestock] = useState(false);
+    const [processingRetur, setProcessingRetur] = useState(false);
 
     const lokasiDenganStok = barang.detail_stoks.filter(d => d.jumlahDiLokasi > 0);
 
@@ -102,6 +110,12 @@ export default function Detail({ barang, lokasi }: Props) {
 
     const [restockForm, setRestockForm] = useState<RestockForm>({
         jumlah: '1',
+        keterangan: '',
+    });
+
+    const [returForm, setReturForm] = useState<ReturForm>({
+        jumlah: '1',
+        jenis_retur: 'masuk',
         keterangan: '',
     });
 
@@ -161,6 +175,23 @@ export default function Detail({ barang, lokasi }: Props) {
         });
     }
 
+    function handleReturChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
+        const { name, value } = e.target;
+        setReturForm(prev => ({ ...prev, [name]: value }));
+    }
+
+    function handleReturSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setProcessingRetur(true);
+        router.post(`/barang/${barang.id_barang}/retur`, returForm as any, {
+            onFinish:  () => setProcessingRetur(false),
+            onSuccess: () => {
+                setShowRetur(false);
+                setReturForm({ jumlah: '1', jenis_retur: 'masuk', keterangan: '' });
+            },
+        });
+    }
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title={`Detail — ${barang.namaBarang}`} />
@@ -191,6 +222,12 @@ export default function Detail({ barang, lokasi }: Props) {
                             className="flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
                         >
                             ↗ Pindahkan Barang
+                        </button>
+                        <button
+                            onClick={() => setShowRetur(true)}
+                            className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 active:scale-95 dark:bg-purple-500 dark:hover:bg-purple-600"
+                        >
+                            ↺ Retur Barang
                         </button>
                         {isAdmin && (
                             <button
@@ -474,6 +511,99 @@ export default function Detail({ barang, lokasi }: Props) {
                                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                                 >
                                     {processingRestock ? 'Memproses...' : 'Restock'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* ── Modal Retur Barang ── */}
+            {showRetur && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                        onClick={() => setShowRetur(false)}
+                    />
+                    <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 dark:bg-neutral-900 dark:ring-white/10">
+                        {/* Header */}
+                        <div className="border-b border-neutral-100 px-5 py-4 dark:border-neutral-800 flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                                Retur Barang
+                            </h3>
+                            <button
+                                onClick={() => setShowRetur(false)}
+                                className="text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Form */}
+                        <form onSubmit={handleReturSubmit} className="space-y-4 px-5 py-4">
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                    Jenis Retur
+                                </label>
+                                <select
+                                    name="jenis_retur"
+                                    value={returForm.jenis_retur}
+                                    onChange={handleReturChange}
+                                    className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-purple-400 dark:focus:ring-purple-400"
+                                >
+                                    <option value="masuk">Kembali ke Produksi (Stok Bertambah)</option>
+                                    <option value="keluar">Musnahkan Stok (Stok Berkurang)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                    Jumlah <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    name="jumlah"
+                                    min="1"
+                                    required
+                                    value={returForm.jumlah}
+                                    onChange={handleReturChange}
+                                    className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-purple-400 dark:focus:ring-purple-400"
+                                />
+                                {errors.jumlah && <p className="mt-1 text-xs text-rose-500">{errors.jumlah}</p>}
+                                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                                    Retur akan otomatis dicatat di Gudang Utama (Lokasi 1).
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                    Keterangan
+                                </label>
+                                <textarea
+                                    name="keterangan"
+                                    rows={3}
+                                    value={returForm.keterangan}
+                                    onChange={handleReturChange}
+                                    placeholder="Alasan retur..."
+                                    className="w-full resize-none rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-purple-400 dark:focus:ring-purple-400"
+                                />
+                                {errors.keterangan && <p className="mt-1 text-xs text-rose-500">{errors.keterangan}</p>}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="mt-6 flex justify-end gap-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRetur(false)}
+                                    className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 active:scale-95 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processingRetur}
+                                    className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-purple-500 dark:hover:bg-purple-600"
+                                >
+                                    {processingRetur ? 'Memproses...' : 'Proses Retur'}
                                 </button>
                             </div>
                         </form>
